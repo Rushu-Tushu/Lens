@@ -1,0 +1,80 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8"/>
+    <style>
+      html,body {
+        background: rgba(0,0,0,0);
+        margin: 0;
+        font-family: -apple-system, "Segoe UI", Roboto, Arial;
+      }
+      .card {
+        backdrop-filter: blur(6px);
+        background: rgba(20,20,20,0.48);
+        color: #fff;
+        padding: 12px;
+        margin: 8px;
+        border-radius: 12px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+        width: 100%;
+        height: 100%;
+        box-sizing: border-box;
+      }
+      .title { font-weight: 600; font-size: 14px; }
+      pre { white-space: pre-wrap; max-height: 110px; overflow:auto; margin:8px 0 0 0; }
+      .actions { margin-top:8px; text-align:right; }
+      button { background: rgba(255,255,255,0.12); color: #fff; border: none; padding:6px 8px; border-radius:6px; margin-left:8px; }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="title" id="title">Assistant</div>
+      <pre id="text">Waiting...</pre>
+      <div class="actions">
+        <button id="copy">Copy</button>
+        <button id="more">More</button>
+        <button id="close">Close</button>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer, clipboard } = require('electron');
+
+      const titleEl = document.getElementById('title');
+      const textEl = document.getElementById('text');
+      const copyBtn = document.getElementById('copy');
+      const moreBtn = document.getElementById('more');
+      const closeBtn = document.getElementById('close');
+
+      window.require('electron').ipcRenderer.on('analysis-start', () => {
+        titleEl.innerText = 'Analyzing...';
+        textEl.innerText = 'Please wait...';
+      });
+
+      window.require('electron').ipcRenderer.on('analysis-done', (evt, data) => {
+        titleEl.innerText = `Assistant — ${data.title || 'window'}`;
+        textEl.innerText = data.assistant || JSON.stringify(data);
+        // if saved_path present, indicate
+        if (data.saved_path) {
+          textEl.innerText += "\n\n(Screenshot saved: " + data.saved_path + ")";
+        }
+      });
+
+      window.require('electron').ipcRenderer.on('analysis-error', (evt, err) => {
+        titleEl.innerText = 'Error';
+        textEl.innerText = String(err);
+      });
+
+      copyBtn.onclick = () => {
+        clipboard.writeText(textEl.innerText || '');
+      };
+
+      moreBtn.onclick = () => {
+        // For MVP open system clipboard and keep popup; later expand to full assistant panel
+        alert('More: for now copy the text and open your notes. I can add a full panel next.');
+      };
+
+      closeBtn.onclick = () => { window.close(); };
+    </script>
+  </body>
+</html>

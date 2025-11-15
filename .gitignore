@@ -1,0 +1,31 @@
+# Python virtual environments
+assistant-observer/venv/
+*.pyc
+__pycache__/
+
+# Node.js dependencies
+assistant-electron/node_modules/
+
+# Environment variables (never commit secrets)
+assistant-observer/.env
+assistant-electron/.env
+.env
+
+# Logs
+*.log
+
+# Python build / cache
+*.pyo
+*.pyd
+*.pdb
+
+# Electron build artifacts
+assistant-electron/dist/
+assistant-electron/out/
+
+# Mac/Windows stuff (just in case)
+.DS_Store
+Thumbs.db
+
+# Screenshots (your captured images)
+assistant-observer/saved_screenshots/

@@ -1,0 +1,19 @@
+{
+    "name": "assistant-electron",
+    "version": "1.0.0",
+    "main": "main.js",
+    "scripts": {
+        "start": "electron ."
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "description": "",
+    "devDependencies": {
+        "electron": "^39.2.0"
+    },
+    "dependencies": {
+        "dotenv": "^17.2.3",
+        "node-fetch": "^2.7.0"
+    }
+}
