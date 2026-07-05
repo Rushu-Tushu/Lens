@@ -1,0 +1,8 @@
+Flask
+python-dotenv
+mss
+Pillow
+pytesseract
+requests
+pygetwindow
+pywin32

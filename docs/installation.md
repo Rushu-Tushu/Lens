@@ -89,10 +89,13 @@ pip install -r requirements.txt
 
 Create a `.env` file.
 
-```env
-ASSISTANT_TOKEN=local_secret_token
-OLLAMA_URL=http://127.0.0.1:11434/api/generate
+Copy the example environment file.
+
+```bash
+cp .env.example .env
 ```
+
+Then update the values as required.
 
 ---
 
@@ -109,14 +112,6 @@ Install dependencies.
 ```bash
 npm install
 ```
-
-Create a `.env` file.
-
-```env
-ASSISTANT_OBSERVER=http://127.0.0.1:5050
-ASSISTANT_TOKEN=local_secret_token
-```
-
 ---
 
 # 6. Start Lens
