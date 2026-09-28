@@ -1,30 +1,27 @@
 # Roadmap
 
-The following improvements are planned for future versions of Lens.
+## Completed (v2.0.0)
 
-## Planned Features
-
-* [ ] Improved OCR preprocessing
-* [ ] Better popup interface
-* [ ] Streaming AI responses
-* [ ] Multi-monitor support
-* [ ] Clipboard-aware analysis
-* [ ] Keyboard shortcut customization
-* [ ] Conversation history
-* [ ] Image understanding using vision models
-* [ ] VS Code extension
-* [ ] Better prompt routing
-* [ ] Performance optimizations
-* [ ] Cross-platform support (Linux and macOS)
+* [x] Real-time SSE token streaming
+* [x] Direct Multimodal Vision support (`qwen3-vl`, `qwen2.5-vl`, `gemma-vl`, `llama3.2-vision`)
+* [x] Ultra-Fast Zero-Thinking Mode bypass (~1s response latency)
+* [x] Dynamic in-HUD Model Switcher with installed model discovery
+* [x] Raycast-grade Command HUD with glassmorphism and animations
+* [x] Markdown parsing & syntax-highlighted code blocks with 1-click copy buttons
+* [x] Area Snip selection tool (`Alt+Shift+S`) with High-DPI scaling
+* [x] Multi-turn conversational chat thread with persistent history
+* [x] Preset action chips (`Fix Error`, `Explain`, `Optimize`, `TL;DR`) with context reuse
+* [x] DeepSeek reasoning `<think>` viewer & collapsible drawer
+* [x] Backend daemon auto-orchestration by Electron
+* [x] Global summon keyboard shortcut (`Alt+L`)
 
 ---
 
-## Possible Future Ideas
+## Planned Future Features
 
-* Voice interaction
-* Plugin system
-* Custom AI model selection
-* Session summaries
-* Context memory
-* File and PDF understanding
-* Browser extension
+* [ ] Standalone 1-click installer (`.exe` / `.dmg` via PyInstaller & electron-builder)
+* [ ] Whisper-powered local voice queries
+* [ ] Multi-monitor active display auto-detection enhancements
+* [ ] Conversation history search & export
+* [ ] VS Code and JetBrains extension integration
+* [ ] Local model downloader UI inside settings drawer

@@ -1,80 +1,1050 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="utf-8"/>
-    <style>
-      html,body {
-        background: rgba(0,0,0,0);
-        margin: 0;
-        font-family: -apple-system, "Segoe UI", Roboto, Arial;
-      }
-      .card {
-        backdrop-filter: blur(6px);
-        background: rgba(20,20,20,0.48);
-        color: #fff;
-        padding: 12px;
-        margin: 8px;
-        border-radius: 12px;
-        box-shadow: 0 6px 18px rgba(0,0,0,0.35);
-        width: 100%;
-        height: 100%;
-        box-sizing: border-box;
-      }
-      .title { font-weight: 600; font-size: 14px; }
-      pre { white-space: pre-wrap; max-height: 110px; overflow:auto; margin:8px 0 0 0; }
-      .actions { margin-top:8px; text-align:right; }
-      button { background: rgba(255,255,255,0.12); color: #fff; border: none; padding:6px 8px; border-radius:6px; margin-left:8px; }
-    </style>
-  </head>
-  <body>
-    <div class="card">
-      <div class="title" id="title">Assistant</div>
-      <pre id="text">Waiting...</pre>
-      <div class="actions">
-        <button id="copy">Copy</button>
-        <button id="more">More</button>
-        <button id="close">Close</button>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Lens HUD</title>
+  <style>
+    :root {
+      --bg: rgba(9, 13, 22, 0.95);
+      --border: rgba(56, 189, 248, 0.22);
+      --border-hover: rgba(56, 189, 248, 0.45);
+      --accent: #38bdf8;
+      --accent-dim: rgba(56, 189, 248, 0.12);
+      --accent-glow: rgba(56, 189, 248, 0.25);
+      --text: #f0f9ff;
+      --text-muted: #94a3b8;
+      --text-dim: #64748b;
+      --code-bg: rgba(14, 20, 32, 0.95);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    html, body {
+      background: transparent;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, sans-serif;
+      color: var(--text);
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: var(--bg);
+      backdrop-filter: blur(32px) saturate(190%);
+      -webkit-backdrop-filter: blur(32px) saturate(190%);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.8), 0 0 30px var(--accent-glow);
+      overflow: hidden;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      position: relative;
+    }
+
+    .container:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Mac Titlebar */
+    .titlebar {
+      -webkit-app-region: drag;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+      background: rgba(255, 255, 255, 0.015);
+      position: relative;
+      z-index: 10;
+    }
+
+    /* Mac Traffic Lights */
+    .traffic-lights {
+      -webkit-app-region: no-drag;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .traffic-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      position: relative;
+    }
+
+    .traffic-btn svg {
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+
+    .traffic-lights:hover .traffic-btn svg {
+      opacity: 0.8;
+    }
+
+    .traffic-close {
+      background: #ff5f56;
+      border: 1px solid #e0443e;
+    }
+    .traffic-minimize {
+      background: #ffbd2e;
+      border: 1px solid #dea123;
+    }
+    .traffic-maximize {
+      background: #27c93f;
+      border: 1px solid #1aab29;
+    }
+
+    .traffic-btn:hover {
+      filter: brightness(1.1);
+    }
+
+    /* Title & Meta */
+    .title-center {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11.5px;
+      letter-spacing: 0.8px;
+      font-weight: 600;
+      min-width: 0;
+    }
+
+    .title-brand {
+      color: var(--accent);
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-weight: 700;
+    }
+
+    .title-sep {
+      color: var(--text-dim);
+    }
+
+    .title-window {
+      color: var(--text-muted);
+      font-weight: 400;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+
+    .title-right {
+      -webkit-app-region: no-drag;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10.5px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      letter-spacing: 0.5px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      background: var(--accent-dim);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: var(--accent);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .status-badge:hover {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent);
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--accent);
+    }
+
+    .status-dot.active {
+      animation: pulse-glow 1.2s infinite alternate;
+    }
+
+    @keyframes pulse-glow {
+      from { opacity: 0.4; box-shadow: 0 0 2px var(--accent); }
+      to { opacity: 1; box-shadow: 0 0 10px var(--accent); }
+    }
+
+    .badge-arrow {
+      font-size: 8px;
+      opacity: 0.7;
+    }
+
+    /* Model Dropdown Menu */
+    .model-dropdown {
+      position: absolute;
+      top: 32px;
+      right: 0;
+      background: rgba(14, 20, 32, 0.97);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), 0 0 20px rgba(56, 189, 248, 0.15);
+      padding: 6px;
+      min-width: 220px;
+      display: none;
+      z-index: 100;
+    }
+
+    .model-dropdown.show {
+      display: block;
+    }
+
+    .model-dropdown-header {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-dim);
+      padding: 4px 8px;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+      margin-bottom: 4px;
+    }
+
+    .model-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .model-item:hover {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .model-item.selected {
+      background: rgba(56, 189, 248, 0.18);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .model-tag {
+      font-size: 9px;
+      padding: 1px 4px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #94a3b8;
+    }
+
+    .model-item.selected .model-tag {
+      background: var(--accent);
+      color: #000;
+      font-weight: 700;
+    }
+
+    .dropdown-divider {
+      height: 1px;
+      background: rgba(56, 189, 248, 0.1);
+      margin: 4px 0;
+    }
+
+    .thinking-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 6px 8px;
+      font-size: 10.5px;
+      color: var(--text-muted);
+    }
+
+    .action-icon-btn {
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-muted);
+      cursor: pointer;
+      width: 26px;
+      height: 26px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .action-icon-btn:hover {
+      background: var(--accent-dim);
+      border-color: rgba(56, 189, 248, 0.3);
+      color: var(--accent);
+    }
+
+    /* Minimal Action Bar */
+    .action-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-bottom: 1px solid rgba(56, 189, 248, 0.08);
+      background: rgba(0, 0, 0, 0.2);
+    }
+
+    .mode-tab {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--text-muted);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .mode-tab svg {
+      opacity: 0.7;
+    }
+
+    .mode-tab:hover {
+      background: var(--accent-dim);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--accent);
+    }
+
+    .mode-tab:hover svg {
+      opacity: 1;
+      stroke: var(--accent);
+    }
+
+    .mode-tab.active {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    .mode-tab.active svg {
+      opacity: 1;
+      stroke: var(--accent);
+    }
+
+    /* Content Area */
+    .content-area {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      user-select: text;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .content-area::-webkit-scrollbar {
+      width: 5px;
+    }
+
+    .content-area::-webkit-scrollbar-thumb {
+      background: rgba(56, 189, 248, 0.2);
+      border-radius: 3px;
+    }
+
+    /* Thread Message Bubbles */
+    .user-msg-block {
+      align-self: flex-end;
+      max-width: 90%;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      border-radius: 8px 8px 2px 8px;
+      padding: 8px 12px;
+      font-size: 12px;
+      color: #e0f2fe;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    }
+
+    .user-msg-header {
+      font-size: 10px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: var(--accent);
+      margin-bottom: 2px;
+      font-weight: 700;
+    }
+
+    .mode-tag-pill {
+      display: inline-block;
+      font-size: 9.5px;
+      font-family: monospace;
+      color: var(--accent);
+      background: var(--accent-dim);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+
+    .assistant-msg-block {
+      align-self: stretch;
+      background: rgba(14, 20, 32, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    /* Deliberation / Reasoning Drawer */
+    .reasoning-box {
+      margin-bottom: 10px;
+      background: rgba(15, 23, 42, 0.7);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 6px;
+      overflow: hidden;
+      font-size: 11.5px;
+    }
+
+    .reasoning-header {
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      background: rgba(56, 189, 248, 0.08);
+      color: var(--accent);
+      font-family: "JetBrains Mono", monospace;
+      letter-spacing: 0.5px;
+      font-size: 10.5px;
+      font-weight: 600;
+    }
+
+    .reasoning-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .reasoning-toggle-icon {
+      font-size: 9px;
+      transition: transform 0.2s ease;
+    }
+
+    .reasoning-box.collapsed .reasoning-toggle-icon {
+      transform: rotate(-90deg);
+    }
+
+    .reasoning-body {
+      padding: 8px 10px;
+      border-top: 1px solid rgba(56, 189, 248, 0.12);
+      color: #94a3b8;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      font-size: 11px;
+      max-height: 120px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+
+    .reasoning-box.collapsed .reasoning-body {
+      display: none;
+    }
+
+    /* Markdown Styling */
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+      color: #fff;
+      margin: 10px 0 6px 0;
+      font-weight: 600;
+    }
+    .markdown-body h1 { font-size: 15px; }
+    .markdown-body h2 { font-size: 14px; color: var(--accent); }
+    .markdown-body h3 { font-size: 13px; }
+
+    .markdown-body p { margin-bottom: 8px; }
+    .markdown-body ul, .markdown-body ol {
+      margin-left: 18px;
+      margin-bottom: 8px;
+    }
+    .markdown-body li { margin-bottom: 3px; }
+    .markdown-body strong { color: #fff; }
+
+    /* Code Blocks */
+    .code-container {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      border-radius: 8px;
+      margin: 8px 0;
+      overflow: hidden;
+    }
+
+    .code-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 10px;
+      background: rgba(8, 12, 20, 0.85);
+      border-bottom: 1px solid rgba(56, 189, 248, 0.1);
+      font-size: 10.5px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      color: var(--accent);
+      letter-spacing: 0.5px;
+    }
+
+    .code-copy-btn {
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .code-copy-btn:hover {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+    }
+
+    pre code {
+      display: block;
+      padding: 10px 12px;
+      overflow-x: auto;
+      font-family: "JetBrains Mono", Consolas, Monaco, monospace;
+      font-size: 11.5px;
+      line-height: 1.5;
+      color: #bae6fd;
+    }
+
+    code:not(pre code) {
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11.5px;
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+
+    /* Light Blue Futuristic Syntax */
+    .hljs-keyword { color: #38bdf8; font-weight: 600; }
+    .hljs-string { color: #7dd3fc; }
+    .hljs-number { color: #93c5fd; }
+    .hljs-function { color: #67e8f9; }
+    .hljs-title { color: #e0f2fe; }
+    .hljs-comment { color: #64748b; font-style: italic; }
+
+    /* Streaming Cursor */
+    .typing-cursor {
+      display: inline-block;
+      width: 5px;
+      height: 13px;
+      background: var(--accent);
+      vertical-align: middle;
+      margin-left: 2px;
+      box-shadow: 0 0 8px var(--accent);
+      animation: blink 0.8s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    /* Terminal Chat Input */
+    .chat-bar {
+      padding: 8px 14px;
+      border-top: 1px solid rgba(56, 189, 248, 0.12);
+      background: rgba(8, 12, 20, 0.95);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .prompt-symbol {
+      color: var(--accent);
+      font-family: monospace;
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(56, 189, 248, 0.15);
+      border-radius: 8px;
+      padding: 7px 10px;
+      color: #fff;
+      font-size: 12px;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.06);
+      box-shadow: 0 0 12px var(--accent-glow);
+    }
+
+    .chat-send-btn {
+      background: var(--accent-dim);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent);
+      width: 30px;
+      height: 30px;
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .chat-send-btn:hover {
+      background: var(--accent);
+      color: #000;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Mac Titlebar -->
+    <div class="titlebar">
+      <!-- Traffic Lights -->
+      <div class="traffic-lights">
+        <button class="traffic-btn traffic-close" id="mac-close" title="Close">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 1l6 6m0-6L1 7" stroke="#4c0000" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="traffic-btn traffic-minimize" id="mac-min" title="Minimize">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 4h6" stroke="#593b00" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+        <button class="traffic-btn traffic-maximize" id="mac-max" title="Maximize">
+          <svg width="8" height="8" viewBox="0 0 8 8"><path d="M1 4h6M4 1v6" stroke="#004d00" stroke-width="1.2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+
+      <!-- Center Title -->
+      <div class="title-center">
+        <span class="title-brand">LENS</span>
+        <span class="title-sep">//</span>
+        <span class="title-window" id="window-title">READY</span>
+      </div>
+
+      <!-- Right Meta & Controls -->
+      <div class="title-right">
+        <!-- Model Switcher Badge -->
+        <div class="status-badge" id="badge-model" title="Click to switch model">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="model-label">QWEN3-VL:8B</span>
+          <span class="badge-arrow">▼</span>
+        </div>
+
+        <!-- Model Picker Dropdown -->
+        <div class="model-dropdown" id="model-dropdown">
+          <div class="model-dropdown-header">Installed Models</div>
+          <div id="model-list"></div>
+          <div class="dropdown-divider"></div>
+          <div class="thinking-toggle-row">
+            <span>Fast Mode (No Thinking)</span>
+            <input type="checkbox" id="chk-fast-mode" checked />
+          </div>
+        </div>
+
+        <!-- Clear Thread Button -->
+        <button class="action-icon-btn" id="btn-clear" title="Clear conversation thread">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+        </button>
+
+        <!-- Copy Response Button -->
+        <button class="action-icon-btn" id="btn-copy" title="Copy response">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+        </button>
       </div>
     </div>
 
-    <script>
-      const { ipcRenderer, clipboard } = require('electron');
+    <!-- Action Bar -->
+    <div class="action-bar">
+      <button class="mode-tab active" data-mode="general">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line></svg>
+        AUTO
+      </button>
+      <button class="mode-tab" data-mode="fix">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="8" y="9" width="8" height="10" rx="4"></rect><path d="M6 13h2m8 0h2M6 9h2m8 0h2M6 17h2m8 0h2M12 5V2m-3 3 6 0"></path></svg>
+        DEBUG
+      </button>
+      <button class="mode-tab" data-mode="explain">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+        EXPLAIN
+      </button>
+      <button class="mode-tab" data-mode="optimize">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+        OPTIMIZE
+      </button>
+      <button class="mode-tab" data-mode="tldr">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line><line x1="3" y1="12" x2="3.01" y2="12"></line><line x1="3" y1="18" x2="3.01" y2="18"></line></svg>
+        TLDR
+      </button>
+      <button class="mode-tab" id="btn-snip">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 2v14a2 2 0 0 0 2 2h14"></path><path d="M18 22V8a2 2 0 0 0-2-2H2"></path></svg>
+        SNIP
+      </button>
+    </div>
 
-      const titleEl = document.getElementById('title');
-      const textEl = document.getElementById('text');
-      const copyBtn = document.getElementById('copy');
-      const moreBtn = document.getElementById('more');
-      const closeBtn = document.getElementById('close');
+    <!-- Main Content Output Area (Thread of Messages) -->
+    <div class="content-area" id="output">
+      <div id="welcome-msg" style="color: var(--text-dim); font-family: monospace; font-size: 12px; margin: auto; text-align: center;">
+        PRESS <span style="color: var(--accent); font-weight: bold;">[ALT + L]</span> ON ANY WINDOW TO ENGAGE LENS.
+      </div>
+    </div>
 
-      window.require('electron').ipcRenderer.on('analysis-start', () => {
-        titleEl.innerText = 'Analyzing...';
-        textEl.innerText = 'Please wait...';
-      });
+    <!-- Terminal Chat Input -->
+    <div class="chat-bar">
+      <span class="prompt-symbol">&gt;</span>
+      <input type="text" class="chat-input" id="chat-input" placeholder="Type instruction or follow-up query..." />
+      <button class="chat-send-btn" id="chat-send" title="Execute">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+      </button>
+    </div>
+  </div>
 
-      window.require('electron').ipcRenderer.on('analysis-done', (evt, data) => {
-        titleEl.innerText = `Assistant — ${data.title || 'window'}`;
-        textEl.innerText = data.assistant || JSON.stringify(data);
-        // if saved_path present, indicate
-        if (data.saved_path) {
-          textEl.innerText += "\n\n(Screenshot saved: " + data.saved_path + ")";
+  <script>
+    const { ipcRenderer, clipboard } = require('electron');
+    let marked = null;
+    let hljs = null;
+
+    try {
+      marked = require('marked');
+      hljs = require('highlight.js');
+      marked.setOptions({
+        breaks: true,
+        highlight: function(code, lang) {
+          if (lang && hljs.getLanguage(lang)) {
+            try { return hljs.highlight(code, { language: lang }).value; } catch (e) {}
+          }
+          return hljs.highlightAuto(code).value;
         }
       });
+    } catch (e) {
+      console.warn('[Lens] marked/hljs load failed', e);
+    }
 
-      window.require('electron').ipcRenderer.on('analysis-error', (evt, err) => {
-        titleEl.innerText = 'Error';
-        textEl.innerText = String(err);
+    // Elements
+    const macClose = document.getElementById('mac-close');
+    const macMin = document.getElementById('mac-min');
+    const macMax = document.getElementById('mac-max');
+    const windowTitleEl = document.getElementById('window-title');
+    const statusDot = document.getElementById('status-dot');
+    const modelBadge = document.getElementById('badge-model');
+    const modelLabel = document.getElementById('model-label');
+    const modelDropdown = document.getElementById('model-dropdown');
+    const modelListEl = document.getElementById('model-list');
+    const chkFastMode = document.getElementById('chk-fast-mode');
+    const outputEl = document.getElementById('output');
+    const welcomeMsg = document.getElementById('welcome-msg');
+    const chatInput = document.getElementById('chat-input');
+    const chatSendBtn = document.getElementById('chat-send');
+    const copyBtn = document.getElementById('btn-copy');
+    const clearBtn = document.getElementById('btn-clear');
+    const snipBtn = document.getElementById('btn-snip');
+
+    let currentMode = 'general';
+    let currentAssistantCard = null;
+    let currentMarkdownEl = null;
+    let currentReasoningBox = null;
+    let currentReasoningBody = null;
+    let currentReasoningTokens = 0;
+    let fullResponseText = '';
+    let isStreaming = false;
+    let activeModelName = 'qwen3-vl:8b';
+
+    // Window controls
+    macClose.onclick = () => ipcRenderer.send('window-close');
+    macMin.onclick = () => ipcRenderer.send('window-minimize');
+    macMax.onclick = () => ipcRenderer.send('window-maximize');
+
+    // Model Dropdown
+    modelBadge.onclick = async (e) => {
+      e.stopPropagation();
+      const isVisible = modelDropdown.classList.contains('show');
+      if (!isVisible) {
+        await refreshModels();
+        modelDropdown.classList.add('show');
+      } else {
+        modelDropdown.classList.remove('show');
+      }
+    };
+
+    document.addEventListener('click', (e) => {
+      if (!modelDropdown.contains(e.target) && e.target !== modelBadge) {
+        modelDropdown.classList.remove('show');
+      }
+    });
+
+    async function refreshModels() {
+      try {
+        const status = await ipcRenderer.invoke('get-status');
+        if (status && status.installed_models) {
+          activeModelName = status.active_model || activeModelName;
+          modelLabel.innerText = activeModelName.toUpperCase();
+          chkFastMode.checked = status.disable_thinking !== false;
+
+          modelListEl.innerHTML = '';
+          status.installed_models.forEach(model => {
+            const item = document.createElement('div');
+            item.className = 'model-item' + (model === activeModelName ? ' selected' : '');
+            
+            const isVision = /vl|vision|qwen|gemma|moondream/i.test(model);
+            const tagText = isVision ? 'VISION' : 'TEXT';
+
+            item.innerHTML = `<span>${model}</span><span class="model-tag">${tagText}</span>`;
+            item.onclick = async (e) => {
+              e.stopPropagation();
+              activeModelName = model;
+              modelLabel.innerText = model.toUpperCase();
+              await ipcRenderer.invoke('set-config', { active_model: model });
+              modelDropdown.classList.remove('show');
+            };
+            modelListEl.appendChild(item);
+          });
+        }
+      } catch (err) {
+        console.warn('[Lens] refreshModels error', err);
+      }
+    }
+
+    chkFastMode.onchange = async () => {
+      await ipcRenderer.invoke('set-config', { disable_thinking: chkFastMode.checked });
+    };
+
+    // Mode Switcher Tabs
+    document.querySelectorAll('.mode-tab[data-mode]').forEach(tab => {
+      tab.onclick = () => {
+        document.querySelectorAll('.mode-tab[data-mode]').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentMode = tab.getAttribute('data-mode');
+        // Reuse context if already open to prevent taking screenshot of the HUD itself!
+        ipcRenderer.send('trigger-analyze', { mode: currentMode, reuse_context: true });
+      };
+    });
+
+    snipBtn.onclick = () => {
+      ipcRenderer.send('trigger-snip');
+    };
+
+    // Clear Thread
+    clearBtn.onclick = () => {
+      outputEl.innerHTML = `
+        <div id="welcome-msg" style="color: var(--text-dim); font-family: monospace; font-size: 12px; margin: auto; text-align: center;">
+          THREAD CLEARED // PRESS <span style="color: var(--accent); font-weight: bold;">[ALT + L]</span> TO RE-ANALYZE SCREEN.
+        </div>`;
+      fullResponseText = '';
+    };
+
+    // Copy Response
+    copyBtn.onclick = () => {
+      clipboard.writeText(fullResponseText || outputEl.innerText);
+      copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      setTimeout(() => {
+        copyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+      }, 1200);
+    };
+
+    // Follow-up Chat
+    function executeChat() {
+      const msg = chatInput.value.trim();
+      if (!msg || isStreaming) return;
+      chatInput.value = '';
+
+      // Remove welcome message if present
+      const welcome = document.getElementById('welcome-msg');
+      if (welcome) welcome.remove();
+
+      // Append user bubble
+      const userBubble = document.createElement('div');
+      userBubble.className = 'user-msg-block';
+      userBubble.innerHTML = `<div class="user-msg-header">&gt; INSTRUCTION</div><div>${escapeHtml(msg)}</div>`;
+      outputEl.appendChild(userBubble);
+
+      ipcRenderer.send('send-chat', { message: msg });
+      outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    chatSendBtn.onclick = executeChat;
+    chatInput.onkeydown = (e) => {
+      if (e.key === 'Enter') executeChat();
+      if (e.key === 'Escape') ipcRenderer.send('window-close');
+    };
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') ipcRenderer.send('window-close');
+    });
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Markdown & Code Blocks
+    function renderCardMarkdown(container, rawText) {
+      if (marked) {
+        container.innerHTML = marked.parse(rawText) + (isStreaming ? '<span class="typing-cursor"></span>' : '');
+      } else {
+        container.innerText = rawText;
+      }
+
+      // Format code blocks
+      container.querySelectorAll('pre code').forEach(codeEl => {
+        const pre = codeEl.parentElement;
+        if (pre.parentElement && pre.parentElement.classList.contains('code-container')) return;
+
+        const codeBox = document.createElement('div');
+        codeBox.className = 'code-container';
+
+        const header = document.createElement('div');
+        header.className = 'code-header';
+        header.innerHTML = `<span>CODE</span><button class="code-copy-btn">COPY</button>`;
+
+        header.querySelector('.code-copy-btn').onclick = (e) => {
+          clipboard.writeText(codeEl.innerText);
+          e.target.innerText = 'COPIED';
+          setTimeout(() => e.target.innerText = 'COPY', 1400);
+        };
+
+        pre.parentNode.insertBefore(codeBox, pre);
+        codeBox.appendChild(header);
+        codeBox.appendChild(pre);
       });
 
-      copyBtn.onclick = () => {
-        clipboard.writeText(textEl.innerText || '');
+      outputEl.scrollTop = outputEl.scrollHeight;
+    }
+
+    // ==================== IPC STREAM LISTENERS ====================
+
+    ipcRenderer.on('stream-start', (evt, data) => {
+      isStreaming = true;
+      fullResponseText = '';
+      currentReasoningTokens = 0;
+      statusDot.classList.add('active');
+
+      const welcome = document.getElementById('welcome-msg');
+      if (welcome) welcome.remove();
+
+      // Create new Assistant Block for this turn
+      currentAssistantCard = document.createElement('div');
+      currentAssistantCard.className = 'assistant-msg-block';
+
+      if (!data || !data.isChat) {
+        const modeTag = document.createElement('div');
+        modeTag.className = 'mode-tag-pill';
+        modeTag.innerText = `ANALYSIS // ${(data?.mode || currentMode).toUpperCase()}`;
+        currentAssistantCard.appendChild(modeTag);
+      }
+
+      // Reasoning Drawer
+      currentReasoningBox = document.createElement('div');
+      currentReasoningBox.className = 'reasoning-box';
+      currentReasoningBox.style.display = 'none';
+      currentReasoningBox.innerHTML = `
+        <div class="reasoning-header">
+          <div class="reasoning-title">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2a8 8 0 0 0-8 8c0 3.5 2.5 6.5 6 7.5V20H8v2h8v-2h-2v-2.5c3.5-1 6-4 6-7.5a8 8 0 0 0-8-8z"></path></svg>
+            <span>DELIBERATION (<span class="token-count">0</span> tokens)</span>
+          </div>
+          <span class="reasoning-toggle-icon">▼</span>
+        </div>
+        <div class="reasoning-body"></div>
+      `;
+
+      currentReasoningBox.querySelector('.reasoning-header').onclick = () => {
+        currentReasoningBox.classList.toggle('collapsed');
       };
 
-      moreBtn.onclick = () => {
-        // For MVP open system clipboard and keep popup; later expand to full assistant panel
-        alert('More: for now copy the text and open your notes. I can add a full panel next.');
-      };
+      currentReasoningBody = currentReasoningBox.querySelector('.reasoning-body');
+      currentAssistantCard.appendChild(currentReasoningBox);
 
-      closeBtn.onclick = () => { window.close(); };
-    </script>
-  </body>
+      // Markdown Content
+      currentMarkdownEl = document.createElement('div');
+      currentMarkdownEl.className = 'markdown-body';
+      currentMarkdownEl.innerHTML = '<span style="color: var(--text-muted); font-family: monospace; font-size: 11.5px;">STREAMING INTELLIGENCE...</span><span class="typing-cursor"></span>';
+      currentAssistantCard.appendChild(currentMarkdownEl);
+
+      outputEl.appendChild(currentAssistantCard);
+      outputEl.scrollTop = outputEl.scrollHeight;
+    });
+
+    ipcRenderer.on('stream-meta', (evt, data) => {
+      if (data.title) windowTitleEl.innerText = data.title.toUpperCase();
+      if (data.model) {
+        activeModelName = data.model;
+        modelLabel.innerText = data.model.toUpperCase();
+      }
+    });
+
+    ipcRenderer.on('stream-think', (evt, item) => {
+      if (item && item.text && currentReasoningBox && currentReasoningBody) {
+        currentReasoningBox.style.display = 'block';
+        currentReasoningBody.innerText += item.text;
+        currentReasoningTokens += item.text.split(/\s+/).length;
+        const countEl = currentReasoningBox.querySelector('.token-count');
+        if (countEl) countEl.innerText = currentReasoningTokens;
+        currentReasoningBody.scrollTop = currentReasoningBody.scrollHeight;
+      }
+    });
+
+    ipcRenderer.on('stream-chunk', (evt, item) => {
+      if (item && item.text && currentMarkdownEl) {
+        fullResponseText += item.text;
+        renderCardMarkdown(currentMarkdownEl, fullResponseText);
+      }
+    });
+
+    ipcRenderer.on('stream-done', () => {
+      isStreaming = false;
+      statusDot.classList.remove('active');
+      if (currentMarkdownEl) {
+        renderCardMarkdown(currentMarkdownEl, fullResponseText);
+      }
+      // Collapse reasoning drawer automatically when done to highlight final response
+      if (currentReasoningBox && currentReasoningTokens > 0) {
+        currentReasoningBox.classList.add('collapsed');
+      }
+    });
+
+    ipcRenderer.on('stream-error', (evt, err) => {
+      isStreaming = false;
+      statusDot.classList.remove('active');
+      if (currentMarkdownEl) {
+        currentMarkdownEl.innerHTML = `<div style="color: #fca5a5; background: rgba(239, 68, 68, 0.12); padding: 10px; border-radius: 6px; border: 1px solid rgba(239, 68, 68, 0.25); font-family: monospace; font-size: 11.5px;">
+          [ERROR] ${err}
+        </div>`;
+      }
+    });
+
+    // Initial model refresh
+    refreshModels();
+  </script>
+</body>
 </html>

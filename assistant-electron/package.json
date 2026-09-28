@@ -1,19 +1,45 @@
 {
-    "name": "assistant-electron",
-    "version": "1.0.0",
-    "main": "main.js",
-    "scripts": {
-        "start": "electron ."
+  "name": "lens-desktop",
+  "productName": "Lens",
+  "version": "2.0.0",
+  "description": "The Anti-Recall: On-Demand, Zero-Surveillance, 100% Local Screen Intelligence",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
+  },
+  "keywords": [
+    "ai",
+    "desktop-assistant",
+    "ollama",
+    "local-ai",
+    "screen-intelligence",
+    "privacy-first"
+  ],
+  "author": "Lens Team",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^39.2.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "highlight.js": "^11.12.0",
+    "marked": "^18.0.14",
+    "node-fetch": "^2.7.0"
+  },
+  "build": {
+    "appId": "com.lens.assistant",
+    "productName": "Lens",
+    "directories": {
+      "output": "dist"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
-    "description": "",
-    "devDependencies": {
-        "electron": "^39.2.0"
-    },
-    "dependencies": {
-        "dotenv": "^17.2.3",
-        "node-fetch": "^2.7.0"
+    "win": {
+      "target": [
+        "portable"
+      ],
+      "icon": "AI.png"
     }
+  }
 }

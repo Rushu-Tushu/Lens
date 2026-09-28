@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Lens Snip</title>
+  <style>
+    * { box-sizing: border-box; user-select: none; }
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background: rgba(8, 12, 20, 0.35);
+      cursor: crosshair;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, monospace;
+    }
+    #box {
+      position: absolute;
+      display: none;
+      border: 2px solid #38bdf8;
+      background: rgba(56, 189, 248, 0.15);
+      border-radius: 4px;
+      box-shadow: 0 0 20px rgba(56, 189, 248, 0.45);
+      pointer-events: none;
+    }
+    #hint {
+      position: fixed;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(9, 13, 22, 0.92);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: #f0f9ff;
+      padding: 8px 18px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-family: "JetBrains Mono", Consolas, monospace;
+      letter-spacing: 0.5px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(56, 189, 248, 0.15);
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .badge {
+      background: rgba(56, 189, 248, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 4px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+    }
+    kbd {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      padding: 1px 5px;
+      border-radius: 3px;
+      color: #38bdf8;
+    }
+  </style>
+</head>
+<body>
+  <div id="hint">
+    <span class="badge">SNIP MODE</span>
+    DRAG RECTANGLE TO ISOLATE AREA // PRESS <kbd>ESC</kbd> TO CANCEL
+  </div>
+  <div id="box"></div>
+
+  <script>
+    const { ipcRenderer } = require('electron');
+    const box = document.getElementById('box');
+    let startX = 0, startY = 0, isDragging = false;
+
+    window.addEventListener('mousedown', (e) => {
+      startX = e.clientX;
+      startY = e.clientY;
+      isDragging = true;
+      box.style.left = `${startX}px`;
+      box.style.top = `${startY}px`;
+      box.style.width = '0px';
+      box.style.height = '0px';
+      box.style.display = 'block';
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (!isDragging) return;
+      const curX = e.clientX;
+      const curY = e.clientY;
+      const left = Math.min(startX, curX);
+      const top = Math.min(startY, curY);
+      const width = Math.abs(curX - startX);
+      const height = Math.abs(curY - startY);
+
+      box.style.left = `${left}px`;
+      box.style.top = `${top}px`;
+      box.style.width = `${width}px`;
+      box.style.height = `${height}px`;
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (!isDragging) return;
+      isDragging = false;
+      const curX = e.clientX;
+      const curY = e.clientY;
+      const left = Math.min(startX, curX);
+      const top = Math.min(startY, curY);
+      const width = Math.abs(curX - startX);
+      const height = Math.abs(curY - startY);
+
+      if (width > 20 && height > 20) {
+        const dpr = window.devicePixelRatio || 1;
+        const physLeft = Math.round((window.screenX + left) * dpr);
+        const physTop = Math.round((window.screenY + top) * dpr);
+        const physWidth = Math.round(width * dpr);
+        const physHeight = Math.round(height * dpr);
+
+        ipcRenderer.send('snip-selected', {
+          left: physLeft,
+          top: physTop,
+          width: physWidth,
+          height: physHeight
+        });
+      } else {
+        ipcRenderer.send('snip-cancelled');
+      }
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        ipcRenderer.send('snip-cancelled');
+      }
+    });
+  </script>
+</body>
+</html>

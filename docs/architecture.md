@@ -2,148 +2,70 @@
 
 ## Overview
 
-Lens follows a simple client-server architecture that runs entirely on the local machine.
+Lens follows a local-first, privacy-respecting client-server architecture designed for zero cloud reliance and sub-second on-demand screen intelligence.
 
-The Electron desktop application acts as the user interface, while a lightweight Flask server performs screen analysis, OCR, prompt generation, and communication with the local language model through Ollama.
-
-```
-┌─────────────────────────────┐
-│       Electron App          │
-│  (System Tray & Overlay)    │
-└──────────────┬──────────────┘
-               │ HTTP Request
-               ▼
-┌─────────────────────────────┐
-│      Flask Observer         │
-├─────────────────────────────┤
-│ • Active Window Detection   │
-│ • Screen Capture            │
-│ • OCR Processing            │
-│ • Prompt Generation         │
-│ • Privacy Controls          │
-└──────────────┬──────────────┘
-               │
-               ▼
-┌─────────────────────────────┐
-│     Ollama Local Server     │
-│      DeepSeek R1 Model      │
-└──────────────┬──────────────┘
-               │
-               ▼
-        AI Response
-               │
-               ▼
-      Electron Overlay
-```
-
----
-
-# Request Flow
-
-The following sequence occurs whenever the user requests assistance.
-
-1. The user clicks **Ask Assistant** from the Electron system tray.
-2. Electron sends a request to the local Flask Observer.
-3. The Observer determines the currently active window.
-4. Only the active window is captured.
-5. The captured image is processed using Tesseract OCR.
-6. The extracted text is converted into a prompt.
-7. The prompt is sent to Ollama running locally.
-8. The generated response is cleaned and formatted.
-9. Electron displays the response inside the desktop overlay.
-
----
-
-# Components
-
-## Electron
-
-Responsible for:
-
-* System tray application
-* Global keyboard shortcuts
-* Transparent popup window
-* Sending requests to the Observer
-* Displaying AI responses
-
----
-
-## Observer (Flask)
-
-Responsible for:
-
-* Authentication
-* Active window detection
-* Window capture
-* OCR processing
-* Prompt generation
-* Communication with Ollama
-* Returning structured JSON responses
-
----
-
-## Tesseract OCR
-
-Extracts readable text from the captured window before it is sent to the language model.
-
----
-
-## Ollama
-
-Runs the local language model used for understanding and generating responses.
-
-Lens currently supports any model available through Ollama.
-
----
-
-# Privacy Design
-
-Lens is designed to minimize unnecessary data collection.
-
-* Only the active window is captured.
-* Nothing is uploaded to external services.
-* Communication happens only through localhost.
-* Screenshots are not stored unless explicitly enabled.
-* Capture can be disabled instantly using the privacy toggle.
-
----
-
-# Communication
-
-Electron and the Observer communicate through HTTP on localhost.
+The system consists of three local processes:
+1. **Electron Desktop App**: System tray, global keyboard shortcuts, Raycast-style glassmorphic streaming HUD, and area snip selector.
+2. **Flask Observer Daemon**: Active window detection, bounding-box capture, multimodal vision encoding, fallback OCR, conversation memory, and Server-Sent Events (SSE) streaming.
+3. **Ollama Local Server**: Multi-modal vision (`qwen2.5-vl`, `qwen3-vl`, `gemma-vl`, `llama3.2-vision`) and text reasoning inference (`deepseek-r1:8b`).
 
 ```
-Electron
-    │
-POST /analyze
-    │
-    ▼
-Observer
-    │
-JSON Response
-    ▼
-Electron
+┌───────────────────────────────────────────────────────────┐
+│                 Electron Desktop Client                   │
+│   • Global Shortcuts (Alt+L, Alt+Shift+S)                 │
+│   • Glassmorphic Streaming HUD (popup.html)               │
+│   • Interactive Snip Area Selector (snip.html)            │
+└─────────────────────────────┬─────────────────────────────┘
+                              │ Server-Sent Events (SSE)
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│              Flask Observer Backend (:5050)               │
+│   • Active Window Discovery (pygetwindow)                 │
+│   • Screen / Region Capture (mss)                         │
+│   • Direct Vision Pipeline (Base64 JPEG)                  │
+│   • Fallback OCR Engine (pytesseract)                     │
+│   • Session Conversation Memory                           │
+└─────────────────────────────┬─────────────────────────────┘
+                              │ HTTP Streaming (/api/generate)
+                              ▼
+┌───────────────────────────────────────────────────────────┐
+│                    Ollama Local Server                    │
+│   • qwen2.5-vl / qwen3-vl / gemma-vl (Multimodal)         │
+│   • deepseek-r1 / llama3.2 (Text & Reasoning)             │
+└───────────────────────────────────────────────────────────┘
 ```
-
-Authentication is performed using a shared token sent in the `x-assistant-token` header.
 
 ---
 
-# Project Layout
+## Request Flow
 
-```
-assistant-electron/
-    Electron application
+### 1. Window Analysis (`Alt + L` or Tray Click)
+1. User presses `Alt + L` while focused on any application.
+2. Electron positions the translucent HUD on the active monitor and initiates a POST request to `/analyze/stream`.
+3. The Observer identifies the active window's bounding box and captures the pixels via `mss`.
+4. **Vision or OCR Branch**:
+   - If a multimodal model is configured (e.g., `qwen2.5-vl`, `gemma-vl`), the image is base64-encoded and sent directly in the Ollama request.
+   - If a text-only model is configured (e.g., `deepseek-r1`), the image is processed with Tesseract OCR.
+5. Ollama streams tokens back via NDJSON.
+6. The Observer relays tokens via Server-Sent Events (SSE) directly to Electron.
+7. The HUD renders Markdown in real-time with syntax-highlighted code blocks.
 
-assistant-observer/
-    Flask API
-    OCR
-    Prompt generation
-    Ollama integration
+### 2. Area Snip Mode (`Alt + Shift + S`)
+1. User presses `Alt + Shift + S`.
+2. Electron opens a fullscreen transparent window with interactive crosshairs.
+3. User drags a rectangle over the desired error or snippet.
+4. On release, the bounding box coordinates are dispatched to `/analyze/stream` with `{ bbox: [x, y, w, h] }`.
 
-docs/
-    Project documentation
+### 3. Screen Context Chat (Follow-Up Queries)
+1. User types into the bottom chat input bar of the HUD.
+2. Electron posts to `/chat/stream` with the user query and session ID.
+3. The Observer injects the cached window context and streams the follow-up answer.
 
-assets/
-    Images and demo files
-```
+---
+
+## Security & Isolation
+
+- **Zero Cloud Network Traffic**: Strictly bound to `127.0.0.1`.
+- **Ephemeral RAM Processing**: Screenshots are never written to disk by default.
+- **Session Authentication**: Secured via `x-assistant-token` header.
+- **Privacy Kill-Switch**: `Ctrl + Shift + P` globally suspends capture capabilities.
