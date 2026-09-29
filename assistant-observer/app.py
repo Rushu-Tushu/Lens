@@ -1,4 +1,4 @@
-# assistant-observer/app.py
+﻿# assistant-observer/app.py
 from flask import Flask, request, jsonify, Response, stream_with_context
 import mss, io, time, hashlib, os, base64
 from PIL import Image
@@ -30,10 +30,10 @@ _state = {
     "save_screenshots": False,
     "save_folder": os.path.join(os.getcwd(), "saved_screenshots"),
     "active_model": OLLAMA_MODEL,
-    "disable_thinking": True  # Default to False thinking for maximum speed
+    "disable_thinking": True  
 }
 _ocr_cache = {}
-_sessions = {}  # session_id -> { "window_title": str, "ocr_snippet": str, "image_b64": str, "is_vision": bool, "history": list }
+_sessions = {}  
 
 VISION_KEYWORDS = ["vl", "vision", "qwen", "gemma", "llava", "moondream", "minicpm"]
 
@@ -42,7 +42,7 @@ def set_dpi_awareness():
     if os.name == 'nt':
         try:
             import ctypes
-            ctypes.windll.shcore.SetProcessDpiAwareness(2) # PROCESS_PER_MONITOR_DPI_AWARE
+            ctypes.windll.shcore.SetProcessDpiAwareness(2) 
         except Exception:
             try:
                 import ctypes
@@ -62,7 +62,7 @@ def is_vision_model(model_name: str) -> bool:
 def image_to_base64(img: Image.Image) -> str:
     """Convert PIL image to base64 string for Ollama vision models."""
     bio = io.BytesIO()
-    # JPEG with 85 quality gives great speed and keeps resolution sharp for vision models
+    
     if img.mode != 'RGB':
         img = img.convert('RGB')
     img.save(bio, format="JPEG", quality=85)
@@ -85,7 +85,7 @@ def ensure_default_desktop():
         if os.name == 'nt':
             import ctypes
             user32 = ctypes.windll.user32
-            hDesk = user32.OpenDesktopW("default", 0, False, 0x01FF) # GENERIC_ALL
+            hDesk = user32.OpenDesktopW("default", 0, False, 0x01FF) 
             if hDesk:
                 user32.SetThreadDesktop(hDesk)
     except Exception:
@@ -156,7 +156,7 @@ def capture_window(bbox=None):
             region = {"left": max(0, int(left)), "top": max(0, int(top)), "width": max(10, int(width)), "height": max(10, int(height))}
             sshot = sct.grab(region)
         else:
-            # monitors[1] is the primary physical display; monitors[0] is virtual span
+            
             mon = sct.monitors[1] if len(sct.monitors) > 1 else sct.monitors[0]
             sshot = sct.grab(mon)
         img = Image.frombytes("RGB", sshot.size, sshot.rgb)
@@ -272,12 +272,10 @@ def stream_ollama(prompt: str, images: list = None, model: str = None, timeout: 
     if images:
         messages[0]["images"] = images
 
-    # Check if thinking should be disabled (user requested for qwen3-vl:8b or state flag)
     should_disable_thinking = _state.get("disable_thinking", True)
     if "qwen" in target_model.lower():
         should_disable_thinking = True
 
-    # For qwen3-vl:8b, inject assistant prefill <think>\n</think> to completely bypass 30s+ reasoning
     if should_disable_thinking:
         messages.append({"role": "assistant", "content": "<think>\n</think>"})
 
@@ -312,7 +310,6 @@ def stream_ollama(prompt: str, images: list = None, model: str = None, timeout: 
             content_piece = msg.get("content", "") or chunk.get("response", "")
             done = chunk.get("done", False)
 
-            # Check for inline <think> tags (e.g. DeepSeek R1 or models printing raw tags)
             if "<think>" in content_piece:
                 in_think_tag = True
                 content_piece = content_piece.replace("<think>", "")
@@ -341,7 +338,6 @@ def stream_ollama(prompt: str, images: list = None, model: str = None, timeout: 
     except Exception as e:
         yield {"type": "error", "text": str(e), "done": True}
 
-# ==================== REST & STREAMING ROUTES ====================
 
 def resolve_model(model_override=None):
     if model_override:
@@ -401,7 +397,7 @@ def analyze_stream():
     body = request.get_json(silent=True) or {}
     mode = body.get("mode", "general")
     custom_prompt = body.get("custom_prompt", "")
-    bbox = body.get("bbox")  # Optional [left, top, width, height] for Snip mode
+    bbox = body.get("bbox")  
     session_id = body.get("session_id", "default_session")
     model_override = body.get("model")
     reuse_context = body.get("reuse_context", False)
@@ -411,7 +407,6 @@ def analyze_stream():
 
     existing_session = _sessions.get(session_id)
     if reuse_context and existing_session and existing_session.get("image_b64"):
-        # Reuse existing screen context to prevent re-capturing the HUD itself
         title = existing_session.get("window_title", "Current Window")
         images_payload = [existing_session["image_b64"]] if is_vision else None
         ocr_snippet = existing_session.get("ocr_snippet", "")
@@ -421,7 +416,7 @@ def analyze_stream():
         else:
             prompt = build_prompt_for_mode(mode, title, context_text=ocr_snippet, custom_prompt=custom_prompt)
     else:
-        # 1. Fresh screen capture
+
         if bbox:
             title = "Snip Selection"
         else:
@@ -429,27 +424,25 @@ def analyze_stream():
 
         img = capture_window(bbox)
 
-        # 2. Downscale if very large
         max_w = 1920
         if img.width > max_w:
             ratio = max_w / img.width
             img = img.resize((int(img.width * ratio), int(img.height * ratio)), Image.LANCZOS)
 
-        # 3. Vision vs OCR routing
         images_payload = None
         ocr_snippet = ""
 
         if is_vision:
-            # Multimodal: Pass image directly to Ollama vision model
+
             images_payload = [image_to_base64(img)]
             prompt = build_prompt_for_mode(mode, title, context_text="[See attached image of the window]", custom_prompt=custom_prompt)
         else:
-            # Text-only model: Use Tesseract OCR
+
             ocr_text = ocr_with_cache(img, max_chars=3500)
             ocr_snippet = ocr_text[:1200]
             prompt = build_prompt_for_mode(mode, title, context_text=ocr_text, custom_prompt=custom_prompt)
 
-        # Save screenshot if configured
+    
         saved_path = None
         if _state["save_screenshots"]:
             os.makedirs(_state["save_folder"], exist_ok=True)
@@ -458,7 +451,7 @@ def analyze_stream():
             saved_path = os.path.join(_state["save_folder"], fname)
             img.save(saved_path)
 
-        # Store in session state for follow-up questions
+    
         _sessions[session_id] = {
             "window_title": title,
             "ocr_snippet": ocr_snippet,
@@ -530,7 +523,6 @@ def chat_stream():
 
     images_payload = [image_b64] if (is_vision and image_b64) else None
 
-    # Track in history
     if "history" in session:
         session["history"].append({"role": "user", "prompt": user_message})
 
