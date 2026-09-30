@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  <img src="assistant-electron/AI.png" alt="Lens Logo" width="96" height="96" />
+  <img src="public/lens-logo.png" alt="Lens Logo" width="96" height="96" />
 </p>
 
 <p align="center">

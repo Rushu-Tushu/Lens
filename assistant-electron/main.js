@@ -20,6 +20,7 @@ function createPopupWindow() {
   const primaryDisplay = screen.getPrimaryDisplay();
   const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
 
+  const iconPath = path.join(__dirname, 'lens-logo.png');
   popupWindow = new BrowserWindow({
     width: 560,
     height: 480,
@@ -30,6 +31,7 @@ function createPopupWindow() {
     skipTaskbar: true,
     resizable: true,
     hasShadow: true,
+    icon: iconPath,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false
@@ -244,7 +246,7 @@ app.whenReady().then(async () => {
   }
 
   // System Tray Setup
-  const iconPath = path.join(__dirname, 'AI.png');
+  const iconPath = path.join(__dirname, 'lens-logo.png');
   const trayIcon = nativeImage.createFromPath(iconPath);
   tray = new Tray(trayIcon);
 
@@ -257,7 +259,7 @@ app.whenReady().then(async () => {
     { label: 'Quit Lens', click: () => app.quit() }
   ]);
 
-  tray.setToolTip('Lens — Privacy-First Desktop AI');
+  tray.setToolTip('Lens: Privacy-First Desktop AI');
   tray.setContextMenu(contextMenu);
   tray.on('click', () => triggerAnalyze());
 
