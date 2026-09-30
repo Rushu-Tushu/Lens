@@ -1,32 +1,33 @@
 # Changelog
 
-## v2.0.0 (Production & Public Release)
-
-Major release transforming Lens into a high-performance, multimodal desktop AI companion.
-
-### New Features & Enhancements
-- **Real-Time Token Streaming**: Upgraded to Server-Sent Events (SSE) pipeline for instant token-by-token generation with sub-300ms time-to-first-token.
-- **Multimodal Vision Integration**: Added native support for local vision models (`qwen3-vl`, `qwen2.5-vl`, `gemma-vl`, `llama3.2-vision`) passing base64 images directly, eliminating mandatory Tesseract OCR installation.
-- **Ultra-Fast Zero-Thinking Mode**: Prefill and parameter bypass to disable time-consuming internal reasoning on vision models, slashing response latency from ~30s down to ~1s.
-- **Dynamic Model Switcher**: In-HUD dropdown to quickly inspect and switch between installed Ollama vision and reasoning models.
-- **Persistent Conversation Thread**: Multi-turn conversational chat with history retention, distinct user message cards, and real-time streaming blocks.
-- **Raycast-Grade Command HUD**: Translucent obsidian glassmorphism overlay with Markdown rendering, dynamic typing cursor, and pulse status indicator.
-- **Area Snip Tool (`Alt+Shift+S`)**: Custom screen selection overlay with high-DPI devicePixelRatio scaling allowing users to drag and isolate specific screen regions.
-- **Preset Action Chips**: Instant 1-click prompts for `Fix Error`, `Explain`, `Optimize`, and `TL;DR` with smart context reuse.
-- **Reasoning Drawer**: Collapsible thinking drawer for DeepSeek R1 and reasoning models.
-- **Syntax Highlighting & 1-Click Copy**: Offline code blocks with language auto-detection and dedicated copy buttons.
-- **Backend Auto-Orchestration**: Electron automatically launches and terminates the Python observer daemon.
-- **Global Summon Shortcut**: Default `Alt+L` hotkey for instant summon.
+All notable changes to the Lens project are documented in this file.
 
 ---
 
-## v1.0.0
+## Version 2.0.0 (Production Release)
 
-Initial public release.
+This release upgrades Lens into an on-demand, multimodal desktop assistant powered by local Ollama models.
 
-### Features
-- Active window analysis
-- OCR with Tesseract
-- Local LLM integration via Ollama
-- Electron desktop overlay
-- Privacy-first architecture
+### Key Enhancements
+
+* Real-Time Token Streaming: Implemented a Server-Sent Events (SSE) pipeline providing instant token-by-token generation with sub-300ms time-to-first-token.
+* Native Multimodal Vision: Added direct support for local vision models (`qwen3-vl:8b`, `qwen2.5-vl`, `gemma-vl`, `llama3.2-vision`), passing base64 images directly to Ollama without requiring optical character recognition software.
+* Ultra-Fast Fast Mode: Introduced a prefill bypass mechanism to disable time-consuming internal reasoning on vision models, reducing response latency from 30 seconds to approximately 1.2 seconds.
+* Dynamic Model Switcher: Added an in-HUD dropdown menu to inspect and switch between installed Ollama vision and reasoning models on the fly.
+* Persistent Conversation Thread: Built a conversational message container that retains dialogue history across multiple follow-up questions.
+* Desktop Command HUD: Redesigned the overlay interface with obsidian glassmorphic styling, syntax-highlighted code blocks, and 1-click copy buttons.
+* Area Snip Tool (`Alt + Shift + S`): Added a fullscreen region selector with devicePixelRatio scaling to capture precise screen regions on high-DPI displays.
+* Preset Action Chips: Added 1-click prompts for `AUTO`, `DEBUG`, `EXPLAIN`, `OPTIMIZE`, and `TLDR` with intelligent context reuse.
+* Collapsible Reasoning Drawer: Added a real-time thinking inspection drawer for reasoning models such as DeepSeek R1.
+* Automated Daemon Orchestration: Configured Electron to manage the lifecycle of the Python observer daemon automatically.
+* 1-Click Launchers: Added `setup.bat` and `run.bat` for automated environment configuration and single-click execution on Windows.
+
+---
+
+## Version 1.0.0 (Initial Prototype)
+
+* Basic active window detection using pygetwindow.
+* Optical character recognition pipeline using Tesseract OCR.
+* Local language model integration using Ollama.
+* Frameless Electron desktop window overlay.
+* Basic token authentication.
